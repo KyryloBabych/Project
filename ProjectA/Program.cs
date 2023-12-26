@@ -11,6 +11,11 @@ class Program
     static void Run()
     {
         TaskManager taskManager = new TaskManager();
+        taskManager.TaskAdded += OnTaskAdded;
+
+        taskManager.TaskStatusChanged += OnTaskStatusChanged;
+
+        taskManager.InProgressCountChanged += InProgressCountChangedHandler;
 
         while (true)
         {
@@ -40,7 +45,28 @@ class Program
                     FindTaskMenu(taskManager);
                     break;
                 case "5":
-                    taskManager.Print();
+                    if (taskManager.Tasks == null || !taskManager.Tasks.Any())
+                    {
+                        Console.WriteLine("Список задач пустий.");
+                    }
+                    else
+                    {
+                        taskManager.Print();
+                        PrintUpcomingTasks(taskManager.Tasks);
+                        Console.WriteLine("\nВикористання делегата Action для виведення iнформацii о задачах:");
+                        taskManager.ActionDelegate = task => Console.WriteLine($"Задача: {task.Title}, Опис: {task.Description}, Стан: {task.Type}");
+                        taskManager.UseActionDelegate();
+
+                        // Використання делегата Predicate
+                        Console.WriteLine("\nВикористання делегата Predicate для виведення завершених задач:");
+                        taskManager.PredicateDelegate = task => task.Type == TaskType.Completed;
+                        taskManager.UsePredicateDelegate();
+
+                        // Використання делегата Func
+                        Console.WriteLine("\nВикористання делегата Func для перевірки однiєi задачi:");
+                        taskManager.FuncDelegate = task => task.Type == TaskType.Canceled;
+                        taskManager.UseFuncDelegate();
+                    }
                     break;
                 case "6":
                     Console.WriteLine("Програма завершена.");
@@ -101,38 +127,118 @@ class Program
         }
 
         taskManager.AddTask(title, description, type);
-        Console.WriteLine("Завдання успiшно додане.");
+       // Console.WriteLine("Завдання успiшно додане.");
     }
 
     static void RemoveTaskMenu(TaskManager taskManager)
     {
         if (taskManager.Tasks.Count == 0)
         {
-            Console.WriteLine("Список задач пуст. Нечего удалять.");
+            Console.WriteLine("Список задач пустий. Нема об'єктів для видалення.");
             return;
         }
 
         Console.Write("Введiть назву завдання для видалення: ");
         string title = Console.ReadLine();
 
-        Task taskToRemove = taskManager.Tasks.Find(t => string.Equals(t.Title, title, StringComparison.OrdinalIgnoreCase));
+        List<Task> foundTasks = taskManager.Tasks
+            .Where(t => string.Equals(t.Title, title, StringComparison.OrdinalIgnoreCase))
+            .ToList();
 
-        if (taskToRemove != null)
+        if (foundTasks.Count > 0)
         {
-            Console.WriteLine("Знайдене Завдання:");
-            taskToRemove.Print();
-
-            Console.Write("Ви впевнені що хочете видалити це завдання? (y/n): ");
-            string confirmation = Console.ReadLine();
-
-            if (confirmation.ToLower() == "y" || confirmation.ToLower() == "н")
+            Console.WriteLine("Знайдено наступнi завдання:");
+            for (int i = 0; i < foundTasks.Count; i++)
             {
-                taskManager.RemoveTask(taskToRemove);
-                Console.WriteLine("Завдання успiшно видалене.");
+                Console.WriteLine($"{i + 1}. Задача - {foundTasks[i].Title}, Опис - {foundTasks[i].Description}, Стан - {foundTasks[i].Type}");
+            }
+
+            if (foundTasks.Count == 1)
+            {
+                Console.Write("Ви впевненi, що хочете видалити це завдання? (y/n): ");
+                if (Console.ReadLine().Trim().ToLower() == "y")
+                {
+                    Task taskToRemove = foundTasks[0];
+                    taskManager.RemoveTask(taskToRemove);
+                    Console.WriteLine($"Завдання '{taskToRemove.Title}' видалено.");
+                }
+                else
+                {
+                    Console.WriteLine("Видалення скасовано.");
+                }
             }
             else
             {
-                Console.WriteLine("Удаление отменено.");
+                Console.Write("Введіть номер завдання для видалення: ");
+                if (int.TryParse(Console.ReadLine(), out int choice) && choice >= 1 && choice <= foundTasks.Count)
+                {
+                    Task taskToRemove = foundTasks[choice - 1];
+                    taskManager.RemoveTask(taskToRemove);
+                    Console.WriteLine($"Завдання '{taskToRemove.Title}' видалено.");
+                }
+                else
+                {
+                    Console.WriteLine("Невірний ввід. Видалення скасовано.");
+                }
+            }
+        }
+        else
+        {
+            Console.WriteLine("Завдання не знайдене.");
+        }
+    }
+    static void InProgressCountChangedHandler(int count)
+    {
+        Console.WriteLine($"Кiлькiсть задач в станi InProgress: {count}");
+    }
+    static void ChangeTaskTypeMenu(TaskManager taskManager)
+    {
+        if (taskManager.Tasks.Count == 0)
+        {
+            Console.WriteLine("Список задач пустий. Нема об'єктів для зміни статусу.");
+            return;
+        }
+
+        Console.Write("Введiть назву завдання для змiни статусу: ");
+        string title = Console.ReadLine();
+
+        List<Task> foundTasks = taskManager.Tasks
+            .Where(t => string.Equals(t.Title, title, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        if (foundTasks.Count > 0)
+        {
+            Console.WriteLine("Знайдено наступні завдання:");
+            for (int i = 0; i < foundTasks.Count; i++)
+            {
+                Console.WriteLine($"{i + 1}. {foundTasks[i].Title}, {foundTasks[i].Description}, {foundTasks[i].Type}");
+            }
+
+            Console.Write("Введіть номер завдання для зміни статусу: ");
+            if (int.TryParse(Console.ReadLine(), out int choice) && choice >= 1 && choice <= foundTasks.Count)
+            {
+                Task taskToChange = foundTasks[choice - 1];
+
+                Console.WriteLine("Оберіть новий тип завдання:");
+                Console.WriteLine("0. Майбутня (Upcoming)");
+                Console.WriteLine("1. В процесi (InProgress)");
+                Console.WriteLine("2. Завершене (Completed)");
+                Console.WriteLine("3. Скасоване (Canceled)");
+
+                if (int.TryParse(Console.ReadLine(), out int newTypeChoice) && Enum.IsDefined(typeof(TaskType), newTypeChoice))
+                {
+                    TaskType newType = (TaskType)newTypeChoice;
+                    taskManager.ChangeTaskType(taskToChange, newType);
+                  //  Console.WriteLine($"Статус завдання '{taskToChange.Title}' змінено на '{newType}'.");
+                }
+                else
+                {
+                    Console.WriteLine("Невірний ввід. Зміна статусу скасована.");
+                }
+            }
+            else
+            {
+                Console.WriteLine("Невірний ввід. Зміна статусу скасована.");
             }
         }
         else
@@ -141,62 +247,23 @@ class Program
         }
     }
 
-
-    static void ChangeTaskTypeMenu(TaskManager taskManager)
+    static void PrintUpcomingTasks(List<Task> tasks)
     {
-        Console.Write("Введiть назву завдання для змiни статусу: ");
-        string title = Console.ReadLine();
+        
 
-        Task taskToChange = taskManager.Tasks.Find(t => string.Equals(t.Title, title, StringComparison.OrdinalIgnoreCase));
-
-        if (taskToChange != null)
+        if (tasks == null || !tasks.Any(task => task.Type == TaskType.Upcoming))
         {
-            Console.WriteLine("Знайдене завдання:");
-            taskToChange.Print();
-
-            Console.WriteLine("Оберiть новий тип завдання:");
-            Console.WriteLine("1. В процесi (InProgress)");
-            Console.WriteLine("2. Завершене (Completed)");
-            Console.WriteLine("3. Скасоване (Canceled)");
-            Console.WriteLine("4. Майбутня (Upcoming)");
-
-            string input = Console.ReadLine();
-
-            TaskType newType;
-            if (input == "4")
-            {
-                newType = TaskType.Upcoming;
-            }
-            else if (Enum.TryParse(input, out newType))
-            {
-                if (newType < TaskType.Upcoming || newType > TaskType.Canceled)
-                {
-                    Console.WriteLine("Неправильний вибiр типу. Статус завдання буде залишений без змiн.");
-                    return;
-                }
-            }
-            else
-            {
-                Console.WriteLine("Неправильний вибiр типу. Статус завдання буде залишений без змiн.");
-                return;
-            }
-
-            Console.WriteLine($"Ви впевнені, що хочете змінити статус цього завдання на {newType}? (y/n): ");
-            string confirmation = Console.ReadLine();
-
-            if (confirmation.ToLower() == "y" || confirmation.ToLower() == "н")
-            {
-                taskManager.ChangeTaskType(taskToChange, newType);
-                Console.WriteLine("Статус завдання успiшно змiнений.");
-            }
-            else
-            {
-                Console.WriteLine("Зміна статусу відмінена.");
-            }
+            Console.WriteLine("Вiдсутнi майбутнi задачi в списку.");
+            return;
         }
-        else
+
+        foreach (var task in tasks)
         {
-            Console.WriteLine("Завдання не знайдене.");
+            if (task is Task printableTask && printableTask.Type == TaskType.Upcoming)
+            {
+                Console.WriteLine("Полiморфiзм: \nМайбутнi задачi:");
+                task.Print();
+            }
         }
     }
 
@@ -208,17 +275,35 @@ class Program
             Console.WriteLine("Список задач пустий. Нема об'єктів для пошуку.");
             return;
         }
+
         Console.Write("Введiть назву завдання для пошуку: ");
         string title = Console.ReadLine();
 
-        Task foundTask = taskManager.Tasks.Find(t => string.Equals(t.Title, title, StringComparison.OrdinalIgnoreCase));
-        if (foundTask != null)
+        List<Task> foundTasks = taskManager.Tasks
+            .Where(t => string.Equals(t.Title, title, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        if (foundTasks.Count > 0)
         {
-            Console.WriteLine($"Завдання знайдене: {foundTask.Title}, {foundTask.Description}, {foundTask.Type}");
+            Console.WriteLine("Завдання(-я) знайдене(-i):");
+            foreach (var task in foundTasks)
+            {
+                Console.WriteLine($"{task.Title}, {task.Description}, {task.Type}");
+            }
         }
         else
         {
             Console.WriteLine("Завдання не знайдене.");
         }
     }
+    static void OnTaskAdded(string message)
+    {
+        Console.WriteLine(message);
+    }
+
+    static void OnTaskStatusChanged(string message, TaskType oldType, TaskType newType)
+    {
+        Console.WriteLine($"{message}. Попереднiй статус: {oldType}, Новий статус: {newType}");
+    }
+
 }
