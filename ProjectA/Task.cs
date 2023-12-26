@@ -1,22 +1,38 @@
 ﻿using System;
 using System.Buffers;
 
-public class Task : IPrintable
+public class Task : AbstractTaskManagerItem, IPrintable
 {
-    public string Title { get; set; }
-    public string Description { get; set; }
+    // Властивості для Type
     public TaskType Type { get; set; }
 
-    public Task(string title, string description, TaskType type)
+    // Реалізація абстрактних властивостей
+    public override string Title { get; set; }
+    public override string Description { get; set; }
+
+    // Конструктор для Task
+    public Task(string title, string description, TaskType type = TaskType.Upcoming) : base(title, description)
     {
-        Title = title;
-        Description = description;
         Type = type;
     }
 
+    // Реалізація методу з інтерфейсу
     public void Print()
     {
-        throw new NotImplementedException();
-        //Console.WriteLine($"{Title}, {Description}, {Type}");
+        Console.WriteLine($"Задача - {Title}, Опис - {Description}, Поточний стан - {Type}");
+    }
+    public override bool Equals(object obj)
+    {
+        if (obj == null || GetType() != obj.GetType())
+            return false;
+
+        Task other = (Task)obj;
+
+        return Title == other.Title && Description == other.Description && Type == other.Type;
+    }
+
+    public override int GetHashCode()
+    {
+        return HashCode.Combine(Title, Description, Type);
     }
 }

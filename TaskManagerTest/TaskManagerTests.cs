@@ -7,18 +7,18 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 public class TaskManagerTests
 {
     [TestMethod]
-public void AddTask_ShouldAddTaskToList()
-{
-    // Arrange
-    TaskManager taskManager = new TaskManager();
-    Task newTask = new Task("Test Task", "Test Description", TaskType.Upcoming);
+    public void AddTask_ShouldAddTaskToList()
+    {
+        // Arrange
+        TaskManager taskManager = new TaskManager();
+        Task newTask = new Task("Test Task", "Test Description", TaskType.Upcoming);
 
-    // Act
-    taskManager.AddTask("Test Task", "Test Description", TaskType.Upcoming);
+        // Act
+        taskManager.AddTask("Test Task", "Test Description", TaskType.Upcoming);
 
-    // Assert
-    CollectionAssert.Contains(GetTasks(taskManager), newTask);
-}
+        // Assert
+        CollectionAssert.Contains(GetTasks(taskManager), newTask);
+    }
 
 
     [TestMethod]
@@ -82,8 +82,9 @@ public void AddTask_ShouldAddTaskToList()
         string printedText = sw.ToString().Trim();
 
         // Assert
-        Assert.AreEqual("Test Task, Test Description, Upcoming", printedText);
+        Assert.AreEqual("Задача - Test Task, Опис - Test Description, Поточний стан - Upcoming", printedText);
     }
+
 
 
     private List<Task> GetTasks(TaskManager taskManager)

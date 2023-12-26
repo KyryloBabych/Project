@@ -1,6 +1,6 @@
 ﻿public enum TaskType
 {
-    Upcoming=1,
+    Upcoming = 0,
     InProgress,
     Completed,
     Canceled

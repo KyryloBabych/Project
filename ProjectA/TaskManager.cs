@@ -25,21 +25,34 @@ public class TaskManager
 
     public void RemoveTask(Task task)
     {
-        throw new NotImplementedException();
+        tasks.Remove(task);
     }
 
     public void ChangeTaskType(Task task, TaskType newType)
     {
-        throw new NotImplementedException();
+        task.Type = newType;
     }
 
     public Task FindTask(string title)
     {
-        throw new NotImplementedException();
+        return tasks.Find(t => t.Title == title);
     }
 
     public void Print()
     {
-        throw new NotImplementedException();
+        if (tasks.Count == 0)
+        {
+            Console.WriteLine("Список задач пустий.");
+        }
+        else
+        {
+            foreach (var task in tasks)
+            {
+                if (task is IPrintable printableTask)
+                {
+                    printableTask.Print();
+                }
+            }
+        }
     }
 }
